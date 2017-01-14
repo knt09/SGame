@@ -67,11 +67,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void StartPlayHitAnimation();
 
-	/** How long will it takes to finish a attack */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
-	float AttackingDuration;
-	float AttackingElapsedTime;
-
 private:
 	// Holds the messaging endpoint.
 	// Noted that this class may have two message endpoint, 
