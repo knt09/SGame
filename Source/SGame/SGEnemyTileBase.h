@@ -67,38 +67,10 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void StartPlayHitAnimation();
 
-	bool	bIsAttacking;
-	bool	bIsPlayingHit;
-
 	/** How long will it takes to finish a attack */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 	float AttackingDuration;
 	float AttackingElapsedTime;
-
-	// Divide the animation to sub sequences and write them by code!
-
-	/** Time window to scale up or down 
-	[0, AttackingScaleTimeWindow] -> Up 
-	[1 - AttackingScaleTimeWindow, 1] -> Down */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
-	float AttackingScaleTimeWindow;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
-	float AttackingScaleRatio;
-
-	// Shaking stage
-	/** Degree to rotate to simulate the shake effect */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
-	float AttackingShakeDegree;
-
-	/** Frequency to rotate to simulate the shake effect */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
-	int32 AttackingShakeFreq;
-
-	/** How long will it takes to finish a attack */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hit")
-	float PlayHitDuration;
-	float PlayHitElapsedTime;
 
 private:
 	// Holds the messaging endpoint.

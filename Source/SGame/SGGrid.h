@@ -44,7 +44,7 @@ public:
 
 	/** Get the world location for a given grid address. */
 	UFUNCTION(BlueprintCallable, Category = Tile)
-	FVector GetLocationFromGridAddress(int32 GridAddress);
+	FVector GetLocationFromGridAddress(int32 GridAddress, bool bNeedYOffset = false);
 
 	/** Get a grid address relative to another grid address. Offset between addresses is measured in tiles. */
 	UFUNCTION(BlueprintCallable, Category = Tile)
@@ -79,6 +79,10 @@ public:
 	/** Calculate if the two address are neighbor, the link is 8 directions*/
 	UFUNCTION(BlueprintCallable, Category = Tile)
 	bool AreAddressesNeighbors(int32 GridAddressA, int32 GridAddressB);
+
+	/** Calculate if the two address are neighbor, the link is 8 directions*/
+	UFUNCTION(BlueprintCallable, Category = Grid)
+	void RefreshGridState();
 
 	// Start Attack, using BP function to implement, since it is more convenient to polish
 	UFUNCTION(BlueprintImplementableEvent)
@@ -142,9 +146,6 @@ protected:
 private:
 	// Holds the messaging endpoint.
 	FMessageEndpointPtr MessageEndpoint;
-
-	/** Handles the player picked new tile*/
-	void HandleNewTileIsPicked(const FMessage_Gameplay_NewTilePicked& Message, const IMessageContextRef& Context);
 
 	/** Handle tile grid event*/
 	void HandleTileArrayCollect(const FMessage_Gameplay_LinkedTilesCollect& Message, const IMessageContextRef& Context);

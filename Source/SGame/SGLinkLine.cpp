@@ -24,15 +24,20 @@ ASGLinkLine::ASGLinkLine()
 	TailSpriteRenderComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	TailSpriteRenderComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	ReplayHeadAnimationDuration = 0.3f;
-	ReplayHeadAnimationElapsedTime = 0;
+	LinkLineMode = ELinkLineMode::ELLM_Sprite;
 }
 
 // Called when the game starts or when spawned
 void ASGLinkLine::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (GetWorld() == nullptr)
+	{
+		UE_LOG(LogSGame, Error, TEXT("Cannot get world, return..."));
+		return;
+	}
+
 	// Build the link line message endpoint
 	MessageEndpoint = FMessageEndpoint::Builder("Gameplay_LinkLine");
 
@@ -53,28 +58,52 @@ void ASGLinkLine::BeginPlay()
 	{
 		UE_LOG(LogSGame, Error, TEXT("There is no grid object in the level!"));
 	}
+
+	if (LinkLineMode == ELinkLineMode::ELLM_Ribbon)
+	{
+		// We need to construct a ribbon emitter
+		FActorSpawnParameters Params;
+		LinkLineRibbonEmitter = GetWorld()->SpawnActor<AEmitter>(AEmitter::StaticClass(), this->GetTransform(), Params);
+		checkSlow(LinkLineRibbonEmitter != nullptr);
+
+		if (LinkLineRibbonPS == nullptr)
+		{
+			UE_LOG(LogSGame, Warning, TEXT("Ribbon PS is empty!"));
+			return;
+		}
+
+		LinkLineRibbonEmitter->SetTemplate(LinkLineRibbonPS);
+	}
 }
 
 // Called every frame
 void ASGLinkLine::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-	TickReplayLinkHeadAnimation(DeltaTime);
 }
 
-bool ASGLinkLine::UpdateLinkLineSprites()
+bool ASGLinkLine::UpdateLinkLineDisplay()
 {
-	if (bIsStaticLine == true)
+	if (bIsStaticLine == true && StaticLinePoints.Num() < 2)
 	{
-		if (StaticLinePoints.Num() < 2)
-		{
-			return false;
-		}
-
-		return UpdateLinkLineSprites(StaticLinePoints);
+		UE_LOG(LogSGame, Warning, TEXT("Staticlink line should contain more than 2 points"));
+		return false;
 	}
 
-	return UpdateLinkLineSprites(LinkLinePoints);
+	switch (LinkLineMode)
+	{
+	case ELinkLineMode::ELLM_Sprite:
+		bIsStaticLine == true ? UpdateLinkLineSprites(StaticLinePoints) : UpdateLinkLineSprites(LinkLinePoints);
+		break;
+	case ELinkLineMode::ELLM_Ribbon:
+		bIsStaticLine == true ? UpdateLinkLineRibbon(StaticLinePoints) : UpdateLinkLineRibbon(LinkLinePoints);
+		break;
+	default:
+		UE_LOG(LogSGame, Warning, TEXT("Link line mode is invalid"));
+		return false;
+	}
+
+	return true;
 }
 
 bool ASGLinkLine::UpdateLinkLineSprites(const TArray<int32>& LinePoints)
@@ -110,7 +139,7 @@ bool ASGLinkLine::UpdateLinkLineSprites(const TArray<int32>& LinePoints)
 	RootComponent->SetWorldScale3D(FVector(1.5f, 1.5f, 1.5f));
 
 	// Iterate all points, and generate line between the two points
-	ELinkDirection LastDirection = ELD_Begin;
+	ELinkDirection LastDirection = ELinkDirection::ELD_Begin;
 	for (int32 i = 0; i < LinePoints.Num(); i++)
 	{
 		// For the first point, we just mark down the initial position
@@ -248,10 +277,14 @@ bool ASGLinkLine::UpdateLinkLineSprites(const TArray<int32>& LinePoints)
 	return true;
 }
 
+bool ASGLinkLine::UpdateLinkLineRibbon(const TArray<int32>& LinePoints)
+{
+	return true;
+}
+
 bool ASGLinkLine::Update()
 {
-	UpdateLinkLineSprites(LinkLinePoints);
-
+	UpdateLinkLineDisplay();
 	return true;
 }
 
@@ -286,7 +319,7 @@ bool ASGLinkLine::ContainsTileAddress(int32 inTileAddress)
 	return LinkLinePoints.Contains(inTileAddress);
 }
 
-bool ASGLinkLine::ReplayLinkAniamtion(TArray<ASGTileBase*>& CollectTiles)
+bool ASGLinkLine::ReplayLinkAnimation(TArray<ASGTileBase*>& CollectTiles)
 {
 	CachedCollectTiles = CollectTiles;
 
@@ -318,8 +351,6 @@ void ASGLinkLine::EndReplayLinkAnimation()
 	ASGGameMode* GameMode = Cast<ASGGameMode>(UGameplayStatics::GetGameMode(this));
 	checkSlow(GameMode);
 
-	IsReplayingLinkLineAnimation = false;
-
 	// Finally collect the tile resources
 	if (CachedCollectTiles.Num() > 0)
 	{
@@ -336,40 +367,6 @@ void ASGLinkLine::EndReplayLinkAnimation()
 	
 	// Reset the linkline after all
 	ResetLinkState();
-}
-
-void ASGLinkLine::TickReplayLinkHeadAnimation(float DeltaSeconds)
-{
-	if (IsReplayingLinkLineAnimation == false)
-	{
-		return;
-	}
-
-	float Ratio = ReplayHeadAnimationElapsedTime / ReplayHeadAnimationDuration;
-	if (Ratio > 1.0f)
-	{
-		// Current segement replay is finished
-		IsReplayingLinkLineAnimation = false;
-		return;
-	}
-	else
-	{
-		if (LinkLineSpriteRendererArray.Num() > 0)
-		{
-			// Get the last body sprite
-			UPaperSpriteComponent* LastLinebody = LinkLineSpriteRendererArray.Last();
-			checkSlow(LastLinebody);
-			LastLinebody->SetRelativeScale3D(FVector(Ratio + 0.2f, 1.0f, 1.0f));
-		}
-		else
-		{
-			// Set the tail sprite scale
-			checkSlow(TailSpriteRenderComponent);
-			TailSpriteRenderComponent->SetRelativeScale3D(FVector(Ratio + 0.2f, 1.0, 1.0f));
-		}
-	}
-
-	ReplayHeadAnimationElapsedTime += DeltaSeconds;
 }
 
 void ASGLinkLine::ReplaySingleLinkLineAniamtion(int32 ReplayLength)
@@ -419,9 +416,6 @@ void ASGLinkLine::ReplaySingleLinkLineAniamtion(int32 ReplayLength)
 		HitMessage->TileID = FakeSelectedTile->GetTileID();
 		MessageEndpoint->Publish(HitMessage, EMessageScope::Process);
 	}
-
-	// Replay head anim
-	ReplayLinkHeadAnimation();
 }
 
 UPaperSpriteComponent* ASGLinkLine::CreateLineCorner(int inAngle, int inLastAngle)
@@ -524,15 +518,6 @@ UPaperSpriteComponent* ASGLinkLine::CreateLineSegment(int inAngle, bool inIsHead
 	NewSprite->SetRelativeRotation(FRotator(inAngle, 0, 0));
 
 	return NewSprite;
-}
-
-void ASGLinkLine::ReplayLinkHeadAnimation()
-{
-	// Reset the played link line percentage
-	ReplayHeadAnimationElapsedTime = 0;
-
-	// Turn on to use body lerp animation
-	IsReplayingLinkLineAnimation = false;
 }
 
 void ASGLinkLine::ResetLinkState()

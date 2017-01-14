@@ -93,6 +93,20 @@ void USGCheatManager::ResetGrid()
 	}
 }
 
+void USGCheatManager::TestRibbonLinkline()
+{
+	ASGLinkLine* CurrentLinkLine = nullptr;
+	for (TActorIterator<ASGLinkLine> It(GetWorld()); It; ++It)
+	{
+		CurrentLinkLine = (ASGLinkLine*)(*It);
+	}
+
+	if (CurrentLinkLine != nullptr)
+	{
+		CurrentLinkLine->TestLinkLineRibbonAnimationUsingStaticPoints();
+	}
+}
+
 void USGCheatManager::TestAsyncQueue()
 {
 	ASGPlayerController* MyPC = GetOuterASGPlayerController();

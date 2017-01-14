@@ -12,19 +12,29 @@
 
 #include "SGLinkLine.generated.h"
 
+/** Link direction*/
+UENUM()
+enum class ELinkDirection : uint8
+{
+	ELD_Begin,
+	ELD_Horizon,
+	ELD_Vertical,
+	ELD_BackSlash,
+	ELD_Slash,
+};
+
+/** How to display the linkline */
+UENUM()
+enum class ELinkLineMode : uint8
+{
+	ELLM_Sprite,		// Use the 2D sprite linkline
+	ELLM_Ribbon,		// Use the ribbon linkline
+};
+
 UCLASS()
 class SGAME_API ASGLinkLine : public AActor
 {
 	GENERATED_BODY()
-
-	enum ELinkDirection
-	{
-		ELD_Begin,
-		ELD_Horizon,
-		ELD_Vertical,
-		ELD_BackSlash,
-		ELD_Slash,
-	};
 	
 public:	
 	// Sets default values for this actor's properties
@@ -38,7 +48,7 @@ public:
 
 	/** Update link line sprites*/
 	UFUNCTION(BlueprintCallable, Category = Update)
-	bool UpdateLinkLineSprites();
+	bool UpdateLinkLineDisplay();
 
 	/** Update the link line*/
 	UFUNCTION(BlueprintCallable, Category = Update)
@@ -54,18 +64,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Visitor)
 	bool ContainsTileAddress(int32 inTileAddress);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Attack)
-	float	ReplayHeadAnimationDuration;
-	float	ReplayHeadAnimationElapsedTime;
-
 	/** 
 	 * Replay link animation 
 	 *
 	 * @return true to replay successfully
 	 */
 	UFUNCTION(BlueprintCallable, Category = Visitor)
-	bool ReplayLinkAniamtion(TArray<ASGTileBase*>& CollectTiles);
-	bool IsReplayingLinkLineAnimation;
+	bool ReplayLinkAnimation(TArray<ASGTileBase*>& CollectTiles);
 
 	/**
 	* Replay link animation
@@ -73,10 +78,17 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void BeginReplayLinkAnimation();
 
-	/**/
+	/** End replay linkline animation */
 	UFUNCTION(BlueprintCallable, Category = Visitor)
 	void EndReplayLinkAnimation();
-	void TickReplayLinkHeadAnimation(float DeltaSeconds);
+
+	/** 
+	 * Replay linkline head ribbon
+	 * @param HeadStartPos ribbon start position
+	 * @param HeadEndPos ribbon end position
+	 */
+	UFUNCTION(BlueprintImplementableEvent)
+	void ReplayLinkLineHeadRibbon(FVector HeadStartPos, FVector HeadEndPos);
 
 	/**
 	* Replay single unit linkline animation
@@ -86,6 +98,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Visitor)
 	void ReplaySingleLinkLineAniamtion(int32 ReplayLength);
 
+	/**
+	* Use static points to test the linkline ribbon animation
+	*/
+	UFUNCTION(BlueprintImplementableEvent)
+	void TestLinkLineRibbonAnimationUsingStaticPoints();
+
+	/** Linkline mode, the mode to display link line */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ELinkLineMode LinkLineMode;
+
 	/** Whether it is a static line. Test only, for static link lines.*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsStaticLine;
@@ -93,7 +115,7 @@ public:
 	/** Static line points. Test only, for static link lines.*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<int32> StaticLinePoints;
-
+	
 	/** Current tiles in the link line*/
 	TArray<ASGTileBase*> LinkLineTiles;
 
@@ -118,8 +140,19 @@ protected:
 	UPROPERTY(Category = Sprite, VisibleAnywhere, BlueprintReadOnly)
 	TArray<UPaperSpriteComponent*> LinkLineSpriteRendererArray;
 
-	/** Update link line using the line points */
+	/** Update link line sprites using the line points */
 	bool UpdateLinkLineSprites(const TArray<int32>& LinePoints);
+
+	// The ribbon ParticleSystem to display the linkline
+	UPROPERTY(Category = Ribbon, EditAnywhere, BlueprintReadOnly, meta = (DisplayThumbnail = "true"))
+	UParticleSystem* LinkLineRibbonPS;
+
+	// The ribbon emitter for display the linkline
+	UPROPERTY(Category = Ribbon, EditAnywhere, BlueprintReadOnly)
+	AEmitter* LinkLineRibbonEmitter;
+
+	/** Update link line ribbon using the line points */
+	bool UpdateLinkLineRibbon(const TArray<int32>& LinePoints);
 
 	/** Link line points, for drawing the sprites*/
 	UPROPERTY(Category = LinePoints, VisibleAnywhere, BlueprintReadOnly)
@@ -149,7 +182,6 @@ private:
 	/** Cached current turn collected tiles for do collect animation after replay link line animation */
 	TArray<ASGTileBase*> CachedCollectTiles;
 
-	void ReplayLinkHeadAnimation();
 public:
 	void ResetLinkState();
 	void BuildPath(ASGTileBase* inNewTile);

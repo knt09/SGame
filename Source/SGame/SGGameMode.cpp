@@ -30,6 +30,7 @@ void ASGGameMode::BeginPlay()
 		.Handling<FMessage_Gameplay_AllTileFinishMove>(this, &ASGGameMode::HandleAllTileFinishMoving)
 		.Handling<FMessage_Gameplay_EnemyBeginAttack>(this, &ASGGameMode::HandleBeginAttack)
 		.Handling<FMessage_Gameplay_CollectLinkLine>(this, &ASGGameMode::HandleCollectLinkLine)
+		.Handling<FMessage_Gameplay_NewTilePicked>(this, &ASGGameMode::HandleNewTileIsPicked)
 		.WithInbox();
 	if (MessageEndpoint.IsValid() == true)
 	{
@@ -39,6 +40,7 @@ void ASGGameMode::BeginPlay()
 		MessageEndpoint->Subscribe<FMessage_Gameplay_AllTileFinishMove>();
 		MessageEndpoint->Subscribe<FMessage_Gameplay_EnemyBeginAttack>();
 		MessageEndpoint->Subscribe<FMessage_Gameplay_CollectLinkLine>();
+		MessageEndpoint->Subscribe<FMessage_Gameplay_NewTilePicked>();
 	}
 
 	// Find the grid actor in the world
@@ -427,7 +429,7 @@ void ASGGameMode::CalculateLinkLine()
 	else
 	{
 		// Replay link line animation if needed
-		CurrentLinkLine->ReplayLinkAniamtion(CollectedTiles);
+		CurrentLinkLine->ReplayLinkAnimation(CollectedTiles);
 	}
 }
 
@@ -554,6 +556,39 @@ void ASGGameMode::OnEnemyAttackStage()
 	GameStatusUpdateMesssage->NewGameStatus = ESGGameStatus::EGS_RoundEnd;
 	MessageEndpoint->Publish(GameStatusUpdateMesssage, EMessageScope::Process);
 }
+
+void ASGGameMode::HandleNewTileIsPicked(const FMessage_Gameplay_NewTilePicked& Message, const IMessageContextRef& Context)
+{
+	UE_LOG(LogSGame, Log, TEXT("Player Build Path with TileID: %d"), Message.TileID);
+
+	checkSlow(CurrentLinkLine);
+	checkSlow(CurrentGrid);
+
+	// Player's link line input should only valid in playerinput stage
+	if (GetCurrentGameStatus() != ESGGameStatus::EGS_PlayerBeginInput)
+	{
+		// Not in the player input state, return
+		return;
+	}
+
+	ASGTileBase* CurrentTile = CurrentGrid->GetTileFromTileID(Message.TileID);
+	if (CurrentTile == nullptr)
+	{
+		UE_LOG(LogSGame, Warning, TEXT("Cannot get tile from the tile ID %d"), Message.TileID);
+		return;
+	}
+
+	// If can link to the last tile, then we build the path
+	if (CanLinkToLastTile(CurrentTile) == true)
+	{
+		// Build the path
+		CurrentLinkLine->BuildPath(CurrentTile);
+
+		// Refresh the grid state
+		CurrentGrid->RefreshGridState();
+	}
+}
+
 
 void ASGGameMode::OnRoundEndStage()
 {

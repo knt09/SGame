@@ -67,6 +67,10 @@ public:
 	UFUNCTION(exec)
 	void ResetGrid();
 
+	// Test ribbon linkline
+	UFUNCTION(exec)
+	void TestRibbonLinkline();
+
 private:
 
 	// Holds the messaging endpoint.
