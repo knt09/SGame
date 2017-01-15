@@ -31,6 +31,35 @@ enum class ELinkLineMode : uint8
 	ELLM_Ribbon,		// Use the ribbon linkline
 };
 
+/** Linkline emitter contains a collision component to get tile overlap event */
+UCLASS()
+class SGAME_API ASGLinkLineEmitter : public AEmitter
+{
+	GENERATED_BODY()
+
+public:
+	ASGLinkLineEmitter();
+
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+	/**
+	* Linkline emitter hit the tile
+	*/
+	UFUNCTION()
+	void OnLinkLineEmitterHitTile(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit);
+
+	/**
+	* Linkline emitter overlap the tile
+	*/
+	UFUNCTION()
+	void OnLinkLineEmitterOverlapTile(AActor* OverlappedActor, AActor* OtherActor);
+
+protected:
+	UBoxComponent*				EmitterHeadCollision;
+	UParticleSystemComponent*	EmitterPSC;
+};
+
 UCLASS()
 class SGAME_API ASGLinkLine : public AActor
 {
@@ -99,10 +128,26 @@ public:
 	void ReplaySingleLinkLineAniamtion(int32 ReplayLength);
 
 	/**
+	* Replay single unit linkline animation
+	*
+	* @param inPointsToStrighten Passed in points to straighten
+	* @return The strightened points
+	*/
+	UFUNCTION(BlueprintCallable, Category = Visitor)
+	TArray<int32> StraightenThePoints(TArray<int32> inPointsToStrighten);
+
+	/**
 	* Use static points to test the linkline ribbon animation
 	*/
 	UFUNCTION(BlueprintImplementableEvent)
 	void TestLinkLineRibbonAnimationUsingStaticPoints();
+
+	/**
+	* Use static segments to test the linkline ribbon animation
+	* segments is just like points, but none of the three points in a line
+	*/
+	UFUNCTION(BlueprintImplementableEvent)
+	void TestLinkLineRibbonAnimationUsingStaticSegments();
 
 	/** Linkline mode, the mode to display link line */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -149,7 +194,7 @@ protected:
 
 	// The ribbon emitter for display the linkline
 	UPROPERTY(Category = Ribbon, EditAnywhere, BlueprintReadOnly)
-	AEmitter* LinkLineRibbonEmitter;
+	ASGLinkLineEmitter* LinkLineRibbonEmitter;
 
 	/** Update link line ribbon using the line points */
 	bool UpdateLinkLineRibbon(const TArray<int32>& LinePoints);

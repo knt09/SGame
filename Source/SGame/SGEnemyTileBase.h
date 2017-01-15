@@ -26,6 +26,10 @@ public:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	/** Begin play hit */
+	UFUNCTION(BlueprintCallable, Category = Hit)
+	void BeginPlayHit();
+
 protected:
 	// The sprite asset for attcking state
 	UPROPERTY(Category = Sprite, EditAnywhere, BlueprintReadOnly, meta = (DisplayThumbnail = "true"))
@@ -58,10 +62,6 @@ protected:
 	/** End attack */
 	UFUNCTION(BlueprintCallable, Category = Attack)
 	void ResetTile();
-
-	/** Begin play hit */
-	UFUNCTION(BlueprintCallable, Category = Hit)
-	void BeginPlayHit();
 
 	// Start Attack, using BP function to implement, since it is more convenient to polish
 	UFUNCTION(BlueprintImplementableEvent)

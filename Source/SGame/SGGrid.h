@@ -88,6 +88,10 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void StartAttackFadeAnimation();
 
+	/** Calculate if the two address are neighbor, the link is 8 directions*/
+	UFUNCTION(BlueprintCallable, Category = Grid)
+	bool IsThreePointsSameLine(int32 Point1, int32 Point2, int32 Point3);
+
 	const TArray<ASGTileBase*>& GetGridTiles() { return GridTiles; }
 
 protected:

@@ -418,6 +418,11 @@ void ASGGrid::RefreshGridState()
 	UpdateTileLinkState();
 }
 
+bool ASGGrid::IsThreePointsSameLine(int32 Point1, int32 Point2, int32 Point3)
+{
+	return ((Point1 - Point2) * (Point1 % GridWidth - Point3 % GridWidth) == (Point1 - Point3) * (Point1 % GridWidth - Point2 % GridWidth));
+}
+
 void ASGGrid::HandleTileArrayCollect(const FMessage_Gameplay_LinkedTilesCollect& Message, const IMessageContextRef& Context)
 {
 	for (int i = 0; i < Message.TilesAddressToCollect.Num(); i++)

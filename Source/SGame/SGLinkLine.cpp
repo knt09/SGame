@@ -3,6 +3,7 @@
 #include "SGame.h"
 #include "SGGameMode.h"
 #include "SGLinkLine.h"
+#include "SGEnemyTileBase.h"
 #include "Math/UnrealMathUtility.h"
 
 // Sets default values
@@ -63,7 +64,8 @@ void ASGLinkLine::BeginPlay()
 	{
 		// We need to construct a ribbon emitter
 		FActorSpawnParameters Params;
-		LinkLineRibbonEmitter = GetWorld()->SpawnActor<AEmitter>(AEmitter::StaticClass(), this->GetTransform(), Params);
+		Params.Owner = this;
+		LinkLineRibbonEmitter = GetWorld()->SpawnActor<ASGLinkLineEmitter>(ASGLinkLineEmitter::StaticClass(), this->GetTransform(), Params);
 		checkSlow(LinkLineRibbonEmitter != nullptr);
 
 		if (LinkLineRibbonPS == nullptr)
@@ -418,6 +420,38 @@ void ASGLinkLine::ReplaySingleLinkLineAniamtion(int32 ReplayLength)
 	}
 }
 
+TArray<int32> ASGLinkLine::StraightenThePoints(TArray<int32> inPointsToStrighten)
+{
+	checkSlow(ParentGrid != nullptr);
+
+	TArray<int32> ResultPoints = inPointsToStrighten;
+	for (int i = 0; i < ResultPoints.Num() - 2; i++)
+	{
+		int32 CurrentPoint = ResultPoints[i];
+		int32 NextPoint = ResultPoints[i + 1];
+		int32 NextNextPoint = ResultPoints[i + 2];
+
+		while (ParentGrid->IsThreePointsSameLine(CurrentPoint, NextPoint, NextNextPoint) == true)
+		{
+			// The NextPoint is in the same line between CurrentPoint<->NextNextPoint
+			ResultPoints.Remove(NextPoint);
+
+			// Three points in the same line, try to find the next point
+			if (i + 2 >= ResultPoints.Num())
+			{
+				// The end of array, break
+				break;
+			}
+
+			// Pick next point
+			NextPoint = NextNextPoint;
+			NextNextPoint = ResultPoints[i + 2];
+		}
+	}
+
+	return ResultPoints;
+}
+
 UPaperSpriteComponent* ASGLinkLine::CreateLineCorner(int inAngle, int inLastAngle)
 {
 	// Create the base sprite and initialize
@@ -565,3 +599,41 @@ void ASGLinkLine::BuildPath(ASGTileBase* inNewTile)
 	Update();
 }
 
+ASGLinkLineEmitter::ASGLinkLineEmitter()
+{
+	// Use the collision box as the root component
+	EmitterHeadCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LinkLineHead-Collision"));
+	EmitterHeadCollision->Mobility = EComponentMobility::Movable;
+	EmitterHeadCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	EmitterHeadCollision->InitBoxExtent(FVector(5, 1000, 5));
+	EmitterHeadCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+	RootComponent = EmitterHeadCollision;
+
+	// Then attach psc to the box
+	GetParticleSystemComponent()->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+}
+
+void ASGLinkLineEmitter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	OnActorHit.AddUniqueDynamic(this, &ASGLinkLineEmitter::OnLinkLineEmitterHitTile);
+	OnActorBeginOverlap.AddUniqueDynamic(this, &ASGLinkLineEmitter::OnLinkLineEmitterOverlapTile);
+}
+
+void ASGLinkLineEmitter::OnLinkLineEmitterHitTile(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
+{
+	UE_LOG(LogSGame, Log, TEXT("Hit!"));
+}
+
+void ASGLinkLineEmitter::OnLinkLineEmitterOverlapTile(AActor* OverlappedActor, AActor* OtherActor)
+{
+	checkSlow(OverlappedActor != nullptr && OtherActor != nullptr);
+
+	if (OtherActor->IsA(ASGEnemyTileBase::StaticClass()) == true)
+	{
+		UE_LOG(LogSGame, Log, TEXT("Overlap with enemy tile"));
+		ASGEnemyTileBase* EnemyTile = CastChecked<ASGEnemyTileBase>(OtherActor);
+		EnemyTile->BeginPlayHit();
+	}
+}
