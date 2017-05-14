@@ -5,9 +5,6 @@
 #include "GameFramework/CheatManager.h"
 #include "Messaging.h"
 #include "SGameMessages.h"
-
-#include "FAsyncQueue.h"
-
 #include "SGCheatManager.generated.h"
 
 /** 
@@ -48,21 +45,6 @@ public:
 	UFUNCTION(exec)
 	void SetHealth(int newHealth);
 
-	// Test async queue
-	UFUNCTION(exec)
-	void TestAsyncQueue();
-	void TestReplayAnimation()
-	{
-		UE_LOG(LogSGameAsyncTask, Log, TEXT("Play animation %d"), CurrentReplayIndex);
-		CurrentReplayIndex++;
-	}
-
-	int CurrentReplayIndex;
-	void FinishReplayAnimation()
-	{
-		UE_LOG(LogSGameAsyncTask, Log, TEXT("Finish play animation..."));
-	}
-
 	//Test Reset gird
 	UFUNCTION(exec)
 	void ResetGrid();
@@ -71,7 +53,4 @@ private:
 
 	// Holds the messaging endpoint.
 	FMessageEndpointPtr MessageEndpoint;
-
-	// Async queue
-	TSharedRef<FAsyncQueue, ESPMode::ThreadSafe> Queue;
 };
