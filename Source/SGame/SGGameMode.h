@@ -155,6 +155,9 @@ private:
 	/** Handle collect the link line*/
 	void HandleCollectLinkLine(const FMessage_Gameplay_CollectLinkLine& Message, const IMessageContextRef& Context);
 
+	/** Handles the player picked new tile*/
+	void HandleNewTileIsPicked(const FMessage_Gameplay_NewTilePicked& Message, const IMessageContextRef& Context);
+
 	/** Current game status for this mode*/
 	ESGGameStatus CurrentGameGameStatus;
 

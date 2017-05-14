@@ -3,6 +3,7 @@
 #include "SGame.h"
 #include "SGGameMode.h"
 #include "SGLinkLine.h"
+#include "SGEnemyTileBase.h"
 #include "Math/UnrealMathUtility.h"
 
 // Sets default values
@@ -24,15 +25,20 @@ ASGLinkLine::ASGLinkLine()
 	TailSpriteRenderComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	TailSpriteRenderComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	ReplayHeadAnimationDuration = 0.3f;
-	ReplayHeadAnimationElapsedTime = 0;
+	LinkLineMode = ELinkLineMode::ELLM_Sprite;
 }
 
 // Called when the game starts or when spawned
 void ASGLinkLine::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (GetWorld() == nullptr)
+	{
+		UE_LOG(LogSGame, Error, TEXT("Cannot get world, return..."));
+		return;
+	}
+
 	// Build the link line message endpoint
 	MessageEndpoint = FMessageEndpoint::Builder("Gameplay_LinkLine");
 
@@ -53,28 +59,53 @@ void ASGLinkLine::BeginPlay()
 	{
 		UE_LOG(LogSGame, Error, TEXT("There is no grid object in the level!"));
 	}
+
+	if (LinkLineMode == ELinkLineMode::ELLM_Ribbon)
+	{
+		// We need to construct a ribbon emitter
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		LinkLineRibbonEmitter = GetWorld()->SpawnActor<ASGLinkLineEmitter>(ASGLinkLineEmitter::StaticClass(), this->GetTransform(), Params);
+		checkSlow(LinkLineRibbonEmitter != nullptr);
+
+		if (LinkLineRibbonPS == nullptr)
+		{
+			UE_LOG(LogSGame, Warning, TEXT("Ribbon PS is empty!"));
+			return;
+		}
+
+		LinkLineRibbonEmitter->SetTemplate(LinkLineRibbonPS);
+	}
 }
 
 // Called every frame
 void ASGLinkLine::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
-	TickReplayLinkHeadAnimation(DeltaTime);
 }
 
-bool ASGLinkLine::UpdateLinkLineSprites()
+bool ASGLinkLine::UpdateLinkLineDisplay()
 {
-	if (bIsStaticLine == true)
+	if (bIsStaticLine == true && StaticLinePoints.Num() < 2)
 	{
-		if (StaticLinePoints.Num() < 2)
-		{
-			return false;
-		}
-
-		return UpdateLinkLineSprites(StaticLinePoints);
+		UE_LOG(LogSGame, Warning, TEXT("Staticlink line should contain more than 2 points"));
+		return false;
 	}
 
-	return UpdateLinkLineSprites(LinkLinePoints);
+	switch (LinkLineMode)
+	{
+	case ELinkLineMode::ELLM_Sprite:
+		bIsStaticLine == true ? UpdateLinkLineSprites(StaticLinePoints) : UpdateLinkLineSprites(LinkLinePoints);
+		break;
+	case ELinkLineMode::ELLM_Ribbon:
+		bIsStaticLine == true ? UpdateLinkLineRibbon(StaticLinePoints) : UpdateLinkLineRibbon(LinkLinePoints);
+		break;
+	default:
+		UE_LOG(LogSGame, Warning, TEXT("Link line mode is invalid"));
+		return false;
+	}
+
+	return true;
 }
 
 bool ASGLinkLine::UpdateLinkLineSprites(const TArray<int32>& LinePoints)
@@ -110,7 +141,7 @@ bool ASGLinkLine::UpdateLinkLineSprites(const TArray<int32>& LinePoints)
 	RootComponent->SetWorldScale3D(FVector(1.5f, 1.5f, 1.5f));
 
 	// Iterate all points, and generate line between the two points
-	ELinkDirection LastDirection = ELD_Begin;
+	ELinkDirection LastDirection = ELinkDirection::ELD_Begin;
 	for (int32 i = 0; i < LinePoints.Num(); i++)
 	{
 		// For the first point, we just mark down the initial position
@@ -248,10 +279,14 @@ bool ASGLinkLine::UpdateLinkLineSprites(const TArray<int32>& LinePoints)
 	return true;
 }
 
+bool ASGLinkLine::UpdateLinkLineRibbon(const TArray<int32>& LinePoints)
+{
+	return true;
+}
+
 bool ASGLinkLine::Update()
 {
-	UpdateLinkLineSprites(LinkLinePoints);
-
+	UpdateLinkLineDisplay();
 	return true;
 }
 
@@ -286,7 +321,7 @@ bool ASGLinkLine::ContainsTileAddress(int32 inTileAddress)
 	return LinkLinePoints.Contains(inTileAddress);
 }
 
-bool ASGLinkLine::ReplayLinkAniamtion(TArray<ASGTileBase*>& CollectTiles)
+bool ASGLinkLine::ReplayLinkAnimation(TArray<ASGTileBase*>& CollectTiles)
 {
 	CachedCollectTiles = CollectTiles;
 
@@ -318,8 +353,6 @@ void ASGLinkLine::EndReplayLinkAnimation()
 	ASGGameMode* GameMode = Cast<ASGGameMode>(UGameplayStatics::GetGameMode(this));
 	checkSlow(GameMode);
 
-	IsReplayingLinkLineAnimation = false;
-
 	// Finally collect the tile resources
 	if (CachedCollectTiles.Num() > 0)
 	{
@@ -336,40 +369,6 @@ void ASGLinkLine::EndReplayLinkAnimation()
 	
 	// Reset the linkline after all
 	ResetLinkState();
-}
-
-void ASGLinkLine::TickReplayLinkHeadAnimation(float DeltaSeconds)
-{
-	if (IsReplayingLinkLineAnimation == false)
-	{
-		return;
-	}
-
-	float Ratio = ReplayHeadAnimationElapsedTime / ReplayHeadAnimationDuration;
-	if (Ratio > 1.0f)
-	{
-		// Current segement replay is finished
-		IsReplayingLinkLineAnimation = false;
-		return;
-	}
-	else
-	{
-		if (LinkLineSpriteRendererArray.Num() > 0)
-		{
-			// Get the last body sprite
-			UPaperSpriteComponent* LastLinebody = LinkLineSpriteRendererArray.Last();
-			checkSlow(LastLinebody);
-			LastLinebody->SetRelativeScale3D(FVector(Ratio + 0.2f, 1.0f, 1.0f));
-		}
-		else
-		{
-			// Set the tail sprite scale
-			checkSlow(TailSpriteRenderComponent);
-			TailSpriteRenderComponent->SetRelativeScale3D(FVector(Ratio + 0.2f, 1.0, 1.0f));
-		}
-	}
-
-	ReplayHeadAnimationElapsedTime += DeltaSeconds;
 }
 
 void ASGLinkLine::ReplaySingleLinkLineAniamtion(int32 ReplayLength)
@@ -419,9 +418,38 @@ void ASGLinkLine::ReplaySingleLinkLineAniamtion(int32 ReplayLength)
 		HitMessage->TileID = FakeSelectedTile->GetTileID();
 		MessageEndpoint->Publish(HitMessage, EMessageScope::Process);
 	}
+}
 
-	// Replay head anim
-	ReplayLinkHeadAnimation();
+TArray<int32> ASGLinkLine::StraightenThePoints(TArray<int32> inPointsToStrighten)
+{
+	checkSlow(ParentGrid != nullptr);
+
+	TArray<int32> ResultPoints = inPointsToStrighten;
+	for (int i = 0; i < ResultPoints.Num() - 2; i++)
+	{
+		int32 CurrentPoint = ResultPoints[i];
+		int32 NextPoint = ResultPoints[i + 1];
+		int32 NextNextPoint = ResultPoints[i + 2];
+
+		while (ParentGrid->IsThreePointsSameLine(CurrentPoint, NextPoint, NextNextPoint) == true)
+		{
+			// The NextPoint is in the same line between CurrentPoint<->NextNextPoint
+			ResultPoints.Remove(NextPoint);
+
+			// Three points in the same line, try to find the next point
+			if (i + 2 >= ResultPoints.Num())
+			{
+				// The end of array, break
+				break;
+			}
+
+			// Pick next point
+			NextPoint = NextNextPoint;
+			NextNextPoint = ResultPoints[i + 2];
+		}
+	}
+
+	return ResultPoints;
 }
 
 UPaperSpriteComponent* ASGLinkLine::CreateLineCorner(int inAngle, int inLastAngle)
@@ -526,15 +554,6 @@ UPaperSpriteComponent* ASGLinkLine::CreateLineSegment(int inAngle, bool inIsHead
 	return NewSprite;
 }
 
-void ASGLinkLine::ReplayLinkHeadAnimation()
-{
-	// Reset the played link line percentage
-	ReplayHeadAnimationElapsedTime = 0;
-
-	// Turn on to use body lerp animation
-	IsReplayingLinkLineAnimation = false;
-}
-
 void ASGLinkLine::ResetLinkState()
 {
 	// Cleaer the current link
@@ -580,3 +599,41 @@ void ASGLinkLine::BuildPath(ASGTileBase* inNewTile)
 	Update();
 }
 
+ASGLinkLineEmitter::ASGLinkLineEmitter()
+{
+	// Use the collision box as the root component
+	EmitterHeadCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LinkLineHead-Collision"));
+	EmitterHeadCollision->Mobility = EComponentMobility::Movable;
+	EmitterHeadCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	EmitterHeadCollision->InitBoxExtent(FVector(5, 1000, 5));
+	EmitterHeadCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+	RootComponent = EmitterHeadCollision;
+
+	// Then attach psc to the box
+	GetParticleSystemComponent()->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+}
+
+void ASGLinkLineEmitter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	OnActorHit.AddUniqueDynamic(this, &ASGLinkLineEmitter::OnLinkLineEmitterHitTile);
+	OnActorBeginOverlap.AddUniqueDynamic(this, &ASGLinkLineEmitter::OnLinkLineEmitterOverlapTile);
+}
+
+void ASGLinkLineEmitter::OnLinkLineEmitterHitTile(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
+{
+	UE_LOG(LogSGame, Log, TEXT("Hit!"));
+}
+
+void ASGLinkLineEmitter::OnLinkLineEmitterOverlapTile(AActor* OverlappedActor, AActor* OtherActor)
+{
+	checkSlow(OverlappedActor != nullptr && OtherActor != nullptr);
+
+	if (OtherActor->IsA(ASGEnemyTileBase::StaticClass()) == true)
+	{
+		UE_LOG(LogSGame, Log, TEXT("Overlap with enemy tile"));
+		ASGEnemyTileBase* EnemyTile = CastChecked<ASGEnemyTileBase>(OtherActor);
+		EnemyTile->BeginPlayHit();
+	}
+}

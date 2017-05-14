@@ -25,7 +25,6 @@ void ASGGrid::BeginPlay()
 	
 	MessageEndpoint = FMessageEndpoint::Builder("Gameplay_Grid")
 		.Handling<FMessage_Gameplay_LinkedTilesCollect>(this, &ASGGrid::HandleTileArrayCollect)
-		.Handling<FMessage_Gameplay_NewTilePicked>(this, &ASGGrid::HandleNewTileIsPicked)
 		.Handling<FMessage_Gameplay_TileBeginMove>(this, &ASGGrid::HandleTileBeginMove)
 		.Handling<FMessage_Gameplay_TileEndMove>(this, &ASGGrid::HandleTileEndMove);
 	if (MessageEndpoint.IsValid() == true)
@@ -303,7 +302,7 @@ ASGTileBase* ASGGrid::GetTileFromTileID(int32 inTileID)
 	return nullptr;
 }
 
-FVector ASGGrid::GetLocationFromGridAddress(int32 GridAddress)
+FVector ASGGrid::GetLocationFromGridAddress(int32 GridAddress, bool bNeedYOffset)
 {
 	checkSlow(TileSize.X > 0.0f);
 	checkSlow(TileSize.Y > 0.0f);
@@ -313,6 +312,11 @@ FVector ASGGrid::GetLocationFromGridAddress(int32 GridAddress)
 	FVector OutLocation = FVector(-(GridWidth / 2.0f) * TileSize.X + (TileSize.X * 0.5f), 0.0f, -(GridHeight / 2.0f) * TileSize.Y + (TileSize.Y * 0.5f));
 	OutLocation.X += TileSize.X * (float)(GridAddress % GridWidth);
 	OutLocation.Z += TileSize.Y * (float)(GridAddress / GridWidth);
+	if (bNeedYOffset == true)
+	{
+		OutLocation.Y = 10;
+	}
+
 	OutLocation += Center;
 
 	return OutLocation;
@@ -405,6 +409,20 @@ bool ASGGrid::AreAddressesNeighbors(int32 GridAddressA, int32 GridAddressB)
 	return false;
 }
 
+void ASGGrid::RefreshGridState()
+{
+	// Update the tile select state 
+	UpdateTileSelectState();
+
+	// Update the tile link state
+	UpdateTileLinkState();
+}
+
+bool ASGGrid::IsThreePointsSameLine(int32 Point1, int32 Point2, int32 Point3)
+{
+	return ((Point1 - Point2) * (Point1 % GridWidth - Point3 % GridWidth) == (Point1 - Point3) * (Point1 % GridWidth - Point2 % GridWidth));
+}
+
 void ASGGrid::HandleTileArrayCollect(const FMessage_Gameplay_LinkedTilesCollect& Message, const IMessageContextRef& Context)
 {
 	for (int i = 0; i < Message.TilesAddressToCollect.Num(); i++)
@@ -449,42 +467,6 @@ void ASGGrid::HandleTileEndMove(const FMessage_Gameplay_TileEndMove& Message, co
 			MessageEndpoint->Publish(FinishMoveMessage, EMessageScope::Process);
 		}
 	}
-}
-
-void ASGGrid::HandleNewTileIsPicked(const FMessage_Gameplay_NewTilePicked& Message, const IMessageContextRef& Context)
-{
-	UE_LOG(LogSGame, Log, TEXT("Player Build Path with TileID: %d"), Message.TileID);
-
-	checkSlow(CurrentLinkLine);
-
-	// Player's link line input should only valid in playerinput stage
-	ASGGameMode* GameMode = Cast<ASGGameMode>(UGameplayStatics::GetGameMode(this));
-	checkSlow(GameMode);
-	if (GameMode->GetCurrentGameStatus() != ESGGameStatus::EGS_PlayerBeginInput)
-	{
-		// Not in the player input state, return
-		return;
-	}
-
-	ASGTileBase* CurrentTile = GetTileFromTileID(Message.TileID);
-	if (CurrentTile == nullptr)
-	{
-		UE_LOG(LogSGame, Warning, TEXT("Cannot get tile from the tile ID %d"), Message.TileID);
-		return;
-	}
-
-	// If can link to the last tile, then we build the path
-	if (GameMode->CanLinkToLastTile(CurrentTile) == true)
-	{
-		checkSlow(CurrentLinkLine);
-		CurrentLinkLine->BuildPath(CurrentTile);
-	}
-
-	// Update the tile select state 
-	UpdateTileSelectState();
-
-	// Update the tile link state
-	UpdateTileLinkState();
 }
 
 void ASGGrid::UpdateTileSelectState()

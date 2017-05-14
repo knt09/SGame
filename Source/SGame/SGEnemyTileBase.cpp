@@ -8,12 +8,6 @@ ASGEnemyTileBase::ASGEnemyTileBase()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	AttackingElapsedTime = 0;
-	AttackingDuration = 1.0f;
-	AttackingShakeDegree = 10.0f;
-	AttackingShakeFreq = 6;
-	AttackingScaleTimeWindow = 0.1f;
-	AttackingScaleRatio = 1.3f;
 
 	Text_Attack = CreateDefaultSubobject<UTextRenderComponent>(TEXT("TextRenderComponent-Attack"));
 	Text_Attack->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
@@ -40,9 +34,6 @@ void ASGEnemyTileBase::EnemyAttack()
 
 void ASGEnemyTileBase::ResetTile()
 {
-	// Set the flag, disable the attacking tick
-	bIsAttacking = false;
-
 	// Pop down the tile to the original place
 	this->AddActorWorldOffset(FVector(0.0f, -1000.0f, 0.0f));
 	this->SetActorLocation(FallingEndLocation);
