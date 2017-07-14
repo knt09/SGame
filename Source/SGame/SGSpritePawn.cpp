@@ -2,6 +2,7 @@
 
 #include "SGame.h"
 #include "SGSpritePawn.h"
+#include "PaperSprite.h"
 
 // Sets default values
 ASGSpritePawn::ASGSpritePawn()

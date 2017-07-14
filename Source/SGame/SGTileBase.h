@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "PaperSprite.h"
 #include "PaperSpriteActor.h"
 #include "GameFramework/Actor.h"
 #include "Messaging.h"

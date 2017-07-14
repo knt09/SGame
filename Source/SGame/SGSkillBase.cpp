@@ -2,6 +2,7 @@
 
 #include "SGame.h"
 #include "SGSkillBase.h"
+#include "PaperSprite.h"
 
 
 // Sets default values
@@ -38,7 +39,7 @@ bool ASGSkillBase::GetReferencedContentObjects(TArray<UObject*>& Objects) const
 
 	if (UPaperSprite* SourceSprite = RenderComponent->GetSprite())
 	{
-		Objects.Add(SourceSprite);
+		Objects.Add(CastChecked<UObject>(SourceSprite));
 	}
 	return true;
 }

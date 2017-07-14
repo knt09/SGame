@@ -2,6 +2,7 @@
 
 #include "SGame.h"
 #include "SGLevelTileManager.h"
+#include "PaperSpriteComponent.h"
 
 
 // Sets default values
@@ -67,7 +68,7 @@ ASGTileBase* ASGLevelTileManager::CreateTile(AActor* inOwner, FVector SpawnLocat
 		NewTile->SetTileID(NextTileID);
 		NewTile->SetSpawnedRound(CurrentRound);
 
-		check(NextTileID < MAXINT32 - 1);
+		check(NextTileID < INTMAX_MAX - 1);
 		NextTileID++;
 
 		// Add the gamemode to the global tile array

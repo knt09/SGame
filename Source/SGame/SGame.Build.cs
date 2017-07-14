@@ -4,8 +4,8 @@ using UnrealBuildTool;
 
 public class SGame : ModuleRules
 {
-	public SGame(TargetInfo Target)
-	{
+	public SGame(ReadOnlyTargetRules ROTargetRules) : base(ROTargetRules)
+    {
         PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "UMG", });
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Paper2D", "UMG" });

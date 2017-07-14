@@ -2721,7 +2721,7 @@ FString AiTweenEvent::GetEventTypeEnumAsFString(EEventType::EventType enumValue)
 		return FString("Invalid");
 	}
 
-	return EnumPtr->GetEnumName(enumValue);
+	return EnumPtr->GetNameStringByIndex(enumValue);
 }
 
 bool AiTweenEvent::IsEventDataType()
