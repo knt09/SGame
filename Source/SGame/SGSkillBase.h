@@ -6,7 +6,7 @@
 #include "PaperSpriteComponent.h"
 #include "SGSkillBase.generated.h"
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FSGSkillBaseData
 {
 	GENERATED_USTRUCT_BODY();

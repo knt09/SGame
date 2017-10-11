@@ -28,7 +28,7 @@ enum class ESGResourceType : uint8
 };
 
 /** The tile resource unit, which can be collected */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FTileResourceUnit
 {
 	GENERATED_USTRUCT_BODY();
@@ -40,7 +40,7 @@ struct FTileResourceUnit
 };
 
 /** The damage info this tile can cause */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FTileDamageInfo
 {
 	GENERATED_USTRUCT_BODY();
@@ -52,7 +52,7 @@ struct FTileDamageInfo
 };
 
 /** The life info for this tile, when the life reduce to 0, it will be collected*/
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FTileLifeArmorInfo
 {
 	GENERATED_USTRUCT_BODY();
@@ -67,7 +67,7 @@ struct FTileLifeArmorInfo
 	float					CurrentArmor;		// Current armor of this tile
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FSGTileAbilities
 {
 	GENERATED_USTRUCT_BODY();
@@ -94,7 +94,7 @@ struct FSGTileAbilities
 };
 
 /** Types of every possible tile state flag that the tile will be in, note it can be in multiple state */
-UENUM()
+UENUM(BlueprintType)
 enum class ESGTileStatusFlag : uint8
 {
 	ESF_STATUS_CHANGED,		// Tile status has changed

@@ -17,7 +17,7 @@ class ASGGrid;
 	if (FilterMessage(Message.TileID) == false) \
 	return;
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FSGTileData
 {
 	GENERATED_USTRUCT_BODY();
