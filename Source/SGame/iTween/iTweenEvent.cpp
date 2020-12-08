@@ -3138,7 +3138,7 @@ void AiTweenEvent::FirstSet()
 		}
 		else if (eventType == EEventType::EventType::umgRTRotateFromTo && widgetTweening)
 		{
-			widgetTweening->SetRenderAngle(floatFrom);
+			widgetTweening->SetRenderTransformAngle(floatFrom);
 		}
 		else if (eventType == EEventType::EventType::umgRTScaleFromTo && widgetTweening)
 		{
@@ -3292,7 +3292,7 @@ void AiTweenEvent::InterpTween()
 	}
 	else if (eventType == EEventType::EventType::umgRTRotateFromTo && widgetTweening)
 	{
-		widgetTweening->SetRenderAngle(FMath::Lerp<float>(floatFrom, floatTo, GetAlphaFromEquation(alpha)));
+		widgetTweening->SetRenderTransformAngle(FMath::Lerp<float>(floatFrom, floatTo, GetAlphaFromEquation(alpha)));
 	}
 	else if (eventType == EEventType::EventType::umgRTScaleFromTo && widgetTweening)
 	{
@@ -3407,7 +3407,7 @@ void AiTweenEvent::LastSet()
 		}
 		else if (eventType == EEventType::EventType::umgRTRotateFromTo && widgetTweening)
 		{
-			widgetTweening->SetRenderAngle(floatTo);
+			widgetTweening->SetRenderTransformAngle(floatTo);
 		}
 		else if (eventType == EEventType::EventType::umgRTScaleFromTo && widgetTweening)
 		{

@@ -2915,7 +2915,7 @@ void UiTween::UMGRTRotateUpdate(UWidget* widgetToRotate, float angleTo, float de
 	//Make sure we have a valid object to tween before proceeding
 	if (widgetToRotate)
 	{
-		widgetToRotate->SetRenderAngle(FMath::FInterpTo(widgetToRotate->RenderTransform.Angle, angleTo, delta, speed));
+		widgetToRotate->SetRenderTransformAngle(FMath::FInterpTo(widgetToRotate->RenderTransform.Angle, angleTo, delta, speed));
 	}
 	else
 	{
